@@ -538,7 +538,6 @@ function separarPacotes() {
     return;
   }
 
-  const quantidade = state.foundVisible.length;
   const agora = new Date().toLocaleString("pt-BR");
   const separados = new Set(state.foundVisible);
 
@@ -552,8 +551,6 @@ function separarPacotes() {
   state.foundVisible = [];
   saveState();
   renderAll();
-
-  alert(quantidade + " pacote(s) marcado(s) como separado(s).");
 }
 
 function novaJornada() {
