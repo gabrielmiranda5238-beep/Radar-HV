@@ -4,8 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Radar HV SSP21</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Radar de IDs SSP21 PRO</title>
 
 <style>
 :root {
@@ -25,22 +24,6 @@ body{
   margin:0;background:var(--bg);color:var(--text);
   font-family:Arial,Helvetica,sans-serif;
 }
-body.cloud-locked > :not(#cloudAuthGate){visibility:hidden}
-#cloudAuthGate{
-  position:fixed;inset:0;z-index:1000;display:grid;place-items:center;
-  padding:20px;background:var(--bg)
-}
-#cloudAuthGate[hidden]{display:none}
-.auth-panel{
-  width:min(100%,420px);padding:26px;background:var(--panel);
-  border:1px solid var(--line);border-radius:10px
-}
-.auth-panel h2{margin-bottom:8px}
-.auth-panel p{color:var(--muted);font-size:13px;line-height:1.5}
-.auth-panel form{margin-top:18px}
-.auth-panel button{width:100%;margin-top:14px}
-#authStatus{min-height:1.5em;margin-top:12px}
-#logoutButton[hidden]{display:none}
 header{
   padding:22px;background:#071421;
   border-bottom:3px solid var(--yellow);
@@ -155,29 +138,14 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </head>
 
 <body>
-<div id="cloudAuthGate" hidden>
-  <section class="auth-panel" aria-labelledby="authTitle">
-    <h2 id="authTitle">Acesso compartilhado</h2>
-    <p>Entre com a conta da equipe para carregar os dados sincronizados.</p>
-    <form id="loginForm">
-      <label for="loginEmail">E-mail</label>
-      <input id="loginEmail" type="email" autocomplete="username" required>
-      <label for="loginPassword">Senha</label>
-      <input id="loginPassword" type="password" autocomplete="current-password" required>
-      <button class="btn" type="submit">Entrar</button>
-    </form>
-    <div id="authStatus" class="notice" role="status" aria-live="polite"></div>
-  </section>
-</div>
 <header>
   <div class="brand">
     <div class="logo">↔</div>
     <div>
-      <h1>RADAR DE HV <span>SSP21</span></h1>
+      <h1>RADAR DE IDs <span>SSP21 PRO</span></h1>
       <p>Retorno à Estação • Conferência de pacotes</p>
     </div>
   </div>
-  <button id="logoutButton" class="btn secondary" type="button" hidden>Sair</button>
   <div class="header-tag">● ALERTA SONORO ATIVO</div>
 </header>
 
@@ -351,7 +319,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
       </div>
       <div class="setting-line">
         <b>Armazenamento</b>
-        <p id="cloudStatus">Salvo neste navegador. Configure o Supabase para sincronizar entre dispositivos.</p>
+        <p>Salvo automaticamente neste navegador. Sem sincronização na nuvem.</p>
       </div>
 
       <label for="minDigits">Quantidade mínima de dígitos</label>
@@ -383,16 +351,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <footer>RADAR DE IDs SSP21 PRO • Ferramenta local de apoio à conferência</footer>
 
 <script>
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
 const STORAGE_KEY = "radar_ssp21_pro_v2";
-let supabaseClient = null;
-let cloudReady = false;
-let cloudApplying = false;
-let cloudSaveTimer = null;
-let cloudChannel = null;
-let cloudUserId = null;
-let cloudInitPromise = null;
 
 let state = {
   ids: [],
@@ -421,152 +380,10 @@ function loadState() {
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    queueCloudSave();
   } catch (error) {
     alert("Não foi possível salvar. Verifique o armazenamento do navegador.");
   }
 }
-
-function queueCloudSave() {
-  if (!supabaseClient || !cloudReady || cloudApplying) return;
-  clearTimeout(cloudSaveTimer);
-  cloudSaveTimer = setTimeout(async () => {
-    const { error } = await supabaseClient
-      .from("app_state")
-      .upsert({ id: "shared", payload: state, updated_at: new Date().toISOString() });
-    if (error) {
-      document.getElementById("cloudStatus").textContent =
-        "Erro ao sincronizar: " + error.message;
-    }
-  }, 500);
-}
-
-async function initializeCloud(session) {
-  const userId = session.user.id;
-  if (cloudReady && cloudUserId === userId) return;
-  if (cloudInitPromise) return cloudInitPromise;
-  cloudUserId = userId;
-
-  cloudInitPromise = (async () => {
-    const status = document.getElementById("authStatus");
-    status.textContent = "Carregando dados compartilhados...";
-    const { data, error } = await supabaseClient
-      .from("app_state")
-      .select("payload")
-      .eq("id", "shared")
-      .maybeSingle();
-    if (error) throw error;
-
-    if (data) {
-      cloudApplying = true;
-      state = {
-        ...state,
-        ...data.payload,
-        config: { ...state.config, ...(data.payload.config || {}) }
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      cloudApplying = false;
-      renderAll();
-    } else {
-      const { error: saveError } = await supabaseClient
-        .from("app_state")
-        .upsert({ id: "shared", payload: state });
-      if (saveError) throw saveError;
-    }
-
-    cloudReady = true;
-    document.body.classList.remove("cloud-locked");
-    document.getElementById("cloudAuthGate").hidden = true;
-    document.getElementById("logoutButton").hidden = false;
-    document.getElementById("cloudStatus").textContent = "Sincronizado com o Supabase.";
-
-    if (!cloudChannel) {
-      cloudChannel = supabaseClient
-        .channel("shared-app-state")
-        .on("postgres_changes", {
-          event: "*", schema: "public", table: "app_state", filter: "id=eq.shared"
-        }, change => {
-          if (!change.new?.payload) return;
-          cloudApplying = true;
-          state = {
-            ...state,
-            ...change.new.payload,
-            config: { ...state.config, ...(change.new.payload.config || {}) }
-          };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-          cloudApplying = false;
-          renderAll();
-          document.getElementById("cloudStatus").textContent = "Sincronizado com o Supabase.";
-        })
-        .subscribe();
-    }
-  })();
-
-  try {
-    await cloudInitPromise;
-  } catch (error) {
-    cloudUserId = null;
-    document.getElementById("authStatus").textContent =
-      "Falha ao carregar os dados: " + error.message;
-  } finally {
-    cloudInitPromise = null;
-  }
-}
-
-function configureSupabase() {
-  const status = document.getElementById("cloudStatus");
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-  if (!window.supabase?.createClient) {
-    status.textContent = "Não foi possível carregar o cliente Supabase. Verifique a conexão.";
-    return;
-  }
-
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  document.body.classList.add("cloud-locked");
-  document.getElementById("cloudAuthGate").hidden = false;
-  document.getElementById("authStatus").textContent = "Entre com a conta compartilhada.";
-
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (session) {
-      setTimeout(() => initializeCloud(session), 0);
-      return;
-    }
-    cloudReady = false;
-    cloudUserId = null;
-    if (cloudChannel) {
-      supabaseClient.removeChannel(cloudChannel);
-      cloudChannel = null;
-    }
-    document.body.classList.add("cloud-locked");
-    document.getElementById("cloudAuthGate").hidden = false;
-    document.getElementById("logoutButton").hidden = true;
-    document.getElementById("authStatus").textContent = "Entre com a conta compartilhada.";
-  });
-
-  supabaseClient.auth.getSession().then(({ data, error }) => {
-    if (error) {
-      document.getElementById("authStatus").textContent = "Falha ao verificar acesso: " + error.message;
-    } else if (data.session) {
-      initializeCloud(data.session);
-    }
-  });
-}
-
-document.getElementById("loginForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  if (!supabaseClient) return;
-  const status = document.getElementById("authStatus");
-  status.textContent = "Validando acesso...";
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email: document.getElementById("loginEmail").value.trim(),
-    password: document.getElementById("loginPassword").value
-  });
-  if (error) status.textContent = "Não foi possível entrar: " + error.message;
-});
-
-document.getElementById("logoutButton").addEventListener("click", async () => {
-  if (supabaseClient) await supabaseClient.auth.signOut();
-});
 
 function goTab(id) {
   document.querySelectorAll(".tab").forEach(section => {
@@ -991,7 +808,6 @@ function apagarTudo() {
 
 loadState();
 renderAll();
-configureSupabase();
 </script>
 </body>
 </html>
