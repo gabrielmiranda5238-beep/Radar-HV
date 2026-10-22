@@ -1,0 +1,997 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar de IDs SSP21 PRO</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root {
+  --bg:#06111f;
+  --panel:#0b2034;
+  --panel2:#102b43;
+  --line:#1c5876;
+  --yellow:#ffe600;
+  --green:#00c781;
+  --red:#ff5266;
+  --blue:#19bfff;
+  --text:#f4f8fc;
+  --muted:#9eb4c8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+}
+body.cloud-locked > :not(#cloudAuthGate){visibility:hidden}
+#cloudAuthGate{
+  position:fixed;inset:0;z-index:1000;display:grid;place-items:center;
+  padding:20px;background:var(--bg)
+}
+#cloudAuthGate[hidden]{display:none}
+.auth-panel{
+  width:min(100%,420px);padding:26px;background:var(--panel);
+  border:1px solid var(--line);border-radius:10px
+}
+.auth-panel h2{margin-bottom:8px}
+.auth-panel p{color:var(--muted);font-size:13px;line-height:1.5}
+.auth-panel form{margin-top:18px}
+.auth-panel button{width:100%;margin-top:14px}
+#authStatus{min-height:1.5em;margin-top:12px}
+#logoutButton[hidden]{display:none}
+header{
+  padding:22px;background:#071421;
+  border-bottom:3px solid var(--yellow);
+  display:flex;justify-content:space-between;
+  align-items:center;gap:14px;flex-wrap:wrap
+}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{
+  width:48px;height:48px;border-radius:50%;
+  background:var(--yellow);color:#071421;
+  display:grid;place-items:center;font-size:24px;font-weight:bold
+}
+h1{font-size:24px;margin:0}
+h1 span{color:var(--yellow)}
+header p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.header-tag{font-size:12px;color:var(--green);font-weight:bold}
+nav{
+  display:flex;gap:7px;flex-wrap:wrap;padding:14px 22px;
+  background:#081725;border-bottom:1px solid #14354c
+}
+nav button{
+  background:transparent;color:#c1d2df;
+  border:1px solid #20445b;border-radius:9px;
+  padding:11px 15px;cursor:pointer;font-weight:bold
+}
+nav button.active,nav button:hover{
+  background:var(--yellow);color:#071421;border-color:var(--yellow)
+}
+main{max-width:1450px;margin:auto;padding:22px}
+.tab{display:none}
+.tab.active{display:block}
+.page-title{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:12px;flex-wrap:wrap;margin-bottom:18px
+}
+h2{font-size:24px;margin:0 0 6px}
+h3{font-size:17px;margin:0 0 9px}
+.page-title p,.sub{font-size:13px;color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:15px}
+.card{
+  grid-column:span 12;background:var(--panel);
+  border:1px solid var(--line);border-radius:14px;padding:18px;
+  min-width:0;margin-bottom:2px
+}
+.half{grid-column:span 6}
+.stats{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;margin-bottom:16px
+}
+.stat{background:#071b2c;border:1px solid var(--line);border-radius:12px;padding:15px}
+.stat small{display:block;color:var(--muted);margin-bottom:8px}
+.stat strong{font-size:29px}
+.yellow strong{color:var(--yellow)}
+.green strong{color:var(--green)}
+.red strong{color:var(--red)}
+.blue strong{color:var(--blue)}
+textarea,input,select{
+  width:100%;padding:12px;border-radius:9px;
+  border:1px solid #245574;background:#041321;color:white;
+  font:14px Arial;outline:none
+}
+textarea{min-height:185px;resize:vertical;line-height:1.5;margin-top:13px}
+input:focus,textarea:focus{border-color:var(--yellow)}
+label{display:block;margin:13px 0 6px;font-size:13px}
+.row{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.row>*{flex:1}
+.btn{
+  border:0;border-radius:9px;padding:12px 14px;
+  cursor:pointer;font-weight:bold;background:var(--yellow);color:#071421
+}
+.btn:hover{filter:brightness(1.08)}
+.btn.secondary{background:#103651;color:white;border:1px solid #286082}
+.btn.green{background:var(--green);color:#032219}
+.btn.red{background:#672234;color:white;border:1px solid #b63e55}
+.notice{
+  border:1px solid #235573;background:#08243a;padding:12px;
+  border-radius:9px;color:#d3eafa;font-size:13px;margin-top:12px
+}
+.pill{
+  display:inline-block;padding:5px 9px;border-radius:20px;
+  background:#08734f;color:#d4ffec;font-size:12px;font-weight:bold
+}
+.pill.pending{background:#154c76;color:#d5f0ff}
+.pill.separated{background:#5a4b18;color:#fff0a6}
+.table-wrap{overflow:auto;border:1px solid #1c4b67;border-radius:9px;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:480px}
+th,td{text-align:left;padding:11px;border-bottom:1px solid #173b52}
+th{color:var(--yellow);background:#0a1c2c}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+.found-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px
+}
+.found-id{
+  padding:12px;background:#064a3b;border:1px solid #078d68;
+  border-radius:8px;color:#caffed;font-weight:bold;overflow-wrap:anywhere
+}
+.found-id:before{content:"✓ ";color:#4affb4}
+.progress{height:9px;background:#17354a;border-radius:20px;overflow:hidden;margin-top:12px}
+.progress span{display:block;height:100%;background:var(--green);width:0}
+.setting-line{padding:13px 0;border-bottom:1px solid #18394e}
+.setting-line p{margin:5px 0 0;color:var(--muted);font-size:13px}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+@media(max-width:800px){
+  main{padding:13px}
+  .half{grid-column:span 12}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  nav{padding:10px;gap:5px}
+  nav button{flex:1;padding:10px 7px;font-size:12px}
+  h1{font-size:20px}
+}
+</style>
+</head>
+
+<body>
+<div id="cloudAuthGate" hidden>
+  <section class="auth-panel" aria-labelledby="authTitle">
+    <h2 id="authTitle">Acesso compartilhado</h2>
+    <p>Entre com a conta da equipe para carregar os dados sincronizados.</p>
+    <form id="loginForm">
+      <label for="loginEmail">E-mail</label>
+      <input id="loginEmail" type="email" autocomplete="username" required>
+      <label for="loginPassword">Senha</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" required>
+      <button class="btn" type="submit">Entrar</button>
+    </form>
+    <div id="authStatus" class="notice" role="status" aria-live="polite"></div>
+  </section>
+</div>
+<header>
+  <div class="brand">
+    <div class="logo">↔</div>
+    <div>
+      <h1>RADAR DE IDs <span>SSP21 PRO</span></h1>
+      <p>Retorno à Estação • Conferência de pacotes</p>
+    </div>
+  </div>
+  <button id="logoutButton" class="btn secondary" type="button" hidden>Sair</button>
+  <div class="header-tag">● ALERTA SONORO ATIVO</div>
+</header>
+
+<nav>
+  <button class="active" data-tab="inicio">⌂ Início</button>
+  <button data-tab="ids">▤ IDs</button>
+  <button data-tab="conferencia">✓ Conferência</button>
+  <button data-tab="historico">◷ Histórico</button>
+  <button data-tab="configuracao">⚙ Configuração</button>
+</nav>
+
+<main>
+
+<!-- ABA INÍCIO -->
+<section id="inicio" class="tab active">
+  <div class="page-title">
+    <div>
+      <h2>Painel operacional</h2>
+      <p>Acompanhe os pacotes enviados pelo grupo e encontrados na tabela.</p>
+    </div>
+    <button class="btn red" onclick="novaJornada()">Nova jornada</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat yellow"><small>Total de IDs</small><strong id="totalStat">0</strong></div>
+    <div class="stat green"><small>Encontrados</small><strong id="foundStat">0</strong></div>
+    <div class="stat red"><small>Pendentes</small><strong id="pendingStat">0</strong></div>
+    <div class="stat blue">
+      <small>Localizados</small><strong id="percentStat">0%</strong>
+      <div class="progress"><span id="progressBar"></span></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card half">
+      <h3>Como utilizar</h3>
+      <p class="sub">Fluxo de trabalho</p>
+      <ol style="line-height:2.1">
+        <li>Copie os IDs do WhatsApp.</li>
+        <li>Cole os números na aba <b>IDs</b>.</li>
+        <li>Copie a tabela do Retorno à Estação.</li>
+        <li>Cole a tabela na aba <b>Conferência</b>.</li>
+        <li>Clique em <b>Conferir IDs</b>.</li>
+        <li>Separe os pacotes encontrados e confirme.</li>
+      </ol>
+      <div class="notice">Os pacotes encontrados ficam destacados até você clicar em “Pacotes separados”.</div>
+    </div>
+
+    <div class="card half">
+      <h3>Resumo da jornada</h3>
+      <div id="homeSummary" class="empty">Nenhum ID carregado.</div>
+      <div class="row">
+        <button class="btn" onclick="goTab('ids')">Adicionar IDs</button>
+        <button class="btn secondary" onclick="goTab('conferencia')">Conferir</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pacotes encontrados aguardando separação</h3>
+      <p class="sub">A lista permanece na tela até a confirmação.</p>
+      <div id="homeFound" class="found-grid" style="margin-top:14px"></div>
+      <div class="row">
+        <button class="btn green" onclick="separarPacotes()">✓ Pacotes separados</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABA IDS -->
+<section id="ids" class="tab">
+  <div class="page-title">
+    <div>
+      <h2>IDs do WhatsApp</h2>
+      <p>Cole os números publicados no grupo. Apenas os IDs serão importados.</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card half">
+      <h3>1. Importar lista de IDs</h3>
+      <p class="sub">Um ID por linha. Duplicados são ignorados.</p>
+      <textarea id="idsInput" placeholder="Cole os IDs aqui&#10;12345678901&#10;12345678902&#10;12345678903"></textarea>
+      <div class="row">
+        <button class="btn" onclick="carregarIDs()">Carregar IDs</button>
+        <button class="btn secondary" onclick="limparCaixa('idsInput')">Limpar caixa</button>
+      </div>
+      <div id="idsMessage" class="notice">Pronto para importar os IDs.</div>
+    </div>
+
+    <div class="card half">
+      <h3>2. Lista carregada</h3>
+      <p class="sub">Confira os IDs e seus respectivos status.</p>
+      <input id="filterIDs" placeholder="Buscar ID..." oninput="renderAll()">
+      <button class="btn secondary" style="margin-top:10px" onclick="exportarIDs()">Exportar CSV</button>
+      <div id="idsTable" class="table-wrap"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABA CONFERÊNCIA -->
+<section id="conferencia" class="tab">
+  <div class="page-title">
+    <div>
+      <h2>Conferência de pacotes</h2>
+      <p>Cole a tabela inteira. O sistema extrairá os IDs e ignorará as outras informações.</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card half">
+      <h3>1. Tabela do Retorno à Estação</h3>
+      <p class="sub">Copie a tabela do sistema e cole abaixo.</p>
+      <textarea id="tableInput" placeholder="Cole aqui a tabela completa..."></textarea>
+      <div class="row">
+        <button class="btn" onclick="conferirIDs()">✓ Conferir IDs</button>
+        <button class="btn secondary" onclick="limparCaixa('tableInput')">Limpar caixa</button>
+      </div>
+      <div id="checkMessage" class="notice">Pronto para conferir.</div>
+    </div>
+
+    <div class="card half">
+      <h3>2. IDs encontrados</h3>
+      <p class="sub">Alerta sonoro ao concluir a conferência. Os IDs ficam fixos até a confirmação.</p>
+      <div id="foundCountLine" style="font-size:25px;font-weight:bold;color:var(--green);margin:14px 0">0 encontrados</div>
+      <div id="foundList" class="found-grid"></div>
+      <div class="row">
+        <button class="btn green" onclick="separarPacotes()">✓ Pacotes separados</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Resultado completo</h3>
+      <p class="sub">Acompanhamento de todos os IDs importados.</p>
+      <div id="checkTable" class="table-wrap"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABA HISTÓRICO -->
+<section id="historico" class="tab">
+  <div class="page-title">
+    <div>
+      <h2>Histórico de conferências</h2>
+      <p>Consulte os registros salvos neste navegador.</p>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="exportarHistorico()">Exportar histórico</button>
+      <button class="btn red" onclick="limparHistorico()">Limpar histórico</button>
+    </div>
+  </div>
+  <div class="card">
+    <div id="historyTable" class="table-wrap"></div>
+  </div>
+</section>
+
+<!-- ABA CONFIGURAÇÃO -->
+<section id="configuracao" class="tab">
+  <div class="page-title">
+    <div>
+      <h2>Configuração</h2>
+      <p>Ajuste os parâmetros e faça cópias de segurança.</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card half">
+      <h3>Preferências</h3>
+      <div class="setting-line">
+        <b>Alertas sonoros</b>
+        <p>Ativos. Um toque curto confirma cada conferência concluída.</p>
+      </div>
+      <div class="setting-line">
+        <b>Armazenamento</b>
+        <p id="cloudStatus">Salvo neste navegador. Configure o Supabase para sincronizar entre dispositivos.</p>
+      </div>
+
+      <label for="minDigits">Quantidade mínima de dígitos</label>
+      <input id="minDigits" type="number" min="1" max="30" value="8">
+
+      <label for="maxDigits">Quantidade máxima de dígitos</label>
+      <input id="maxDigits" type="number" min="1" max="50" value="30">
+
+      <button class="btn" style="margin-top:14px" onclick="salvarConfig()">Salvar configuração</button>
+      <div id="configMessage" class="notice">Tamanho padrão: de 8 a 30 dígitos.</div>
+    </div>
+
+    <div class="card half">
+      <h3>Backup e manutenção</h3>
+      <p class="sub">Faça backup antes de limpar os dados.</p>
+      <div class="row">
+        <button class="btn" onclick="exportarBackup()">Baixar backup JSON</button>
+        <button class="btn secondary" onclick="document.getElementById('backupFile').click()">Restaurar backup</button>
+      </div>
+      <input id="backupFile" type="file" accept=".json,application/json" style="display:none" onchange="restaurarBackup(event)">
+      <div class="notice">Atenção: o armazenamento local não sincroniza automaticamente entre notebooks diferentes.</div>
+      <button class="btn red" style="margin-top:15px" onclick="apagarTudo()">Apagar todos os dados</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>RADAR DE IDs SSP21 PRO • Ferramenta local de apoio à conferência</footer>
+
+<script>
+const SUPABASE_URL = "";
+const SUPABASE_ANON_KEY = "";
+const STORAGE_KEY = "radar_ssp21_pro_v2";
+let supabaseClient = null;
+let cloudReady = false;
+let cloudApplying = false;
+let cloudSaveTimer = null;
+let cloudChannel = null;
+let cloudUserId = null;
+let cloudInitPromise = null;
+
+let state = {
+  ids: [],
+  foundVisible: [],
+  foundAll: [],
+  history: [],
+  config: { min: 8, max: 30 },
+  lastScan: []
+};
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && typeof saved === "object") {
+      state = {
+        ...state,
+        ...saved,
+        config: { ...state.config, ...(saved.config || {}) }
+      };
+    }
+  } catch (error) {
+    console.warn("Não foi possível carregar os dados locais.", error);
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    queueCloudSave();
+  } catch (error) {
+    alert("Não foi possível salvar. Verifique o armazenamento do navegador.");
+  }
+}
+
+function queueCloudSave() {
+  if (!supabaseClient || !cloudReady || cloudApplying) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(async () => {
+    const { error } = await supabaseClient
+      .from("app_state")
+      .upsert({ id: "shared", payload: state, updated_at: new Date().toISOString() });
+    if (error) {
+      document.getElementById("cloudStatus").textContent =
+        "Erro ao sincronizar: " + error.message;
+    }
+  }, 500);
+}
+
+async function initializeCloud(session) {
+  const userId = session.user.id;
+  if (cloudReady && cloudUserId === userId) return;
+  if (cloudInitPromise) return cloudInitPromise;
+  cloudUserId = userId;
+
+  cloudInitPromise = (async () => {
+    const status = document.getElementById("authStatus");
+    status.textContent = "Carregando dados compartilhados...";
+    const { data, error } = await supabaseClient
+      .from("app_state")
+      .select("payload")
+      .eq("id", "shared")
+      .maybeSingle();
+    if (error) throw error;
+
+    if (data) {
+      cloudApplying = true;
+      state = {
+        ...state,
+        ...data.payload,
+        config: { ...state.config, ...(data.payload.config || {}) }
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      cloudApplying = false;
+      renderAll();
+    } else {
+      const { error: saveError } = await supabaseClient
+        .from("app_state")
+        .upsert({ id: "shared", payload: state });
+      if (saveError) throw saveError;
+    }
+
+    cloudReady = true;
+    document.body.classList.remove("cloud-locked");
+    document.getElementById("cloudAuthGate").hidden = true;
+    document.getElementById("logoutButton").hidden = false;
+    document.getElementById("cloudStatus").textContent = "Sincronizado com o Supabase.";
+
+    if (!cloudChannel) {
+      cloudChannel = supabaseClient
+        .channel("shared-app-state")
+        .on("postgres_changes", {
+          event: "*", schema: "public", table: "app_state", filter: "id=eq.shared"
+        }, change => {
+          if (!change.new?.payload) return;
+          cloudApplying = true;
+          state = {
+            ...state,
+            ...change.new.payload,
+            config: { ...state.config, ...(change.new.payload.config || {}) }
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          cloudApplying = false;
+          renderAll();
+          document.getElementById("cloudStatus").textContent = "Sincronizado com o Supabase.";
+        })
+        .subscribe();
+    }
+  })();
+
+  try {
+    await cloudInitPromise;
+  } catch (error) {
+    cloudUserId = null;
+    document.getElementById("authStatus").textContent =
+      "Falha ao carregar os dados: " + error.message;
+  } finally {
+    cloudInitPromise = null;
+  }
+}
+
+function configureSupabase() {
+  const status = document.getElementById("cloudStatus");
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  if (!window.supabase?.createClient) {
+    status.textContent = "Não foi possível carregar o cliente Supabase. Verifique a conexão.";
+    return;
+  }
+
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  document.body.classList.add("cloud-locked");
+  document.getElementById("cloudAuthGate").hidden = false;
+  document.getElementById("authStatus").textContent = "Entre com a conta compartilhada.";
+
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      setTimeout(() => initializeCloud(session), 0);
+      return;
+    }
+    cloudReady = false;
+    cloudUserId = null;
+    if (cloudChannel) {
+      supabaseClient.removeChannel(cloudChannel);
+      cloudChannel = null;
+    }
+    document.body.classList.add("cloud-locked");
+    document.getElementById("cloudAuthGate").hidden = false;
+    document.getElementById("logoutButton").hidden = true;
+    document.getElementById("authStatus").textContent = "Entre com a conta compartilhada.";
+  });
+
+  supabaseClient.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      document.getElementById("authStatus").textContent = "Falha ao verificar acesso: " + error.message;
+    } else if (data.session) {
+      initializeCloud(data.session);
+    }
+  });
+}
+
+document.getElementById("loginForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!supabaseClient) return;
+  const status = document.getElementById("authStatus");
+  status.textContent = "Validando acesso...";
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: document.getElementById("loginEmail").value.trim(),
+    password: document.getElementById("loginPassword").value
+  });
+  if (error) status.textContent = "Não foi possível entrar: " + error.message;
+});
+
+document.getElementById("logoutButton").addEventListener("click", async () => {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+});
+
+function goTab(id) {
+  document.querySelectorAll(".tab").forEach(section => {
+    section.classList.toggle("active", section.id === id);
+  });
+
+  document.querySelectorAll("nav button").forEach(button => {
+    button.classList.toggle("active", button.dataset.tab === id);
+  });
+
+  if (id === "configuracao") {
+    document.getElementById("minDigits").value = state.config.min;
+    document.getElementById("maxDigits").value = state.config.max;
+  }
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.querySelectorAll("nav button").forEach(button => {
+  button.addEventListener("click", () => goTab(button.dataset.tab));
+});
+
+/* CORREÇÃO: extrai números sem depender de lookbehind. */
+function extractIDs(text) {
+  const min = Number(state.config.min) || 8;
+  const max = Number(state.config.max) || 30;
+
+  const encontrados = String(text || "").match(/[0-9]+/g) || [];
+
+  return [...new Set(
+    encontrados.filter(id => id.length >= min && id.length <= max)
+  )];
+}
+
+function playCheckSound() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+
+  const context = new AudioContextClass();
+  const now = context.currentTime;
+  const notes = [659.25, 783.99, 987.77, 1318.51];
+
+  notes.forEach((frequency, index) => {
+    const start = now + index * 0.12;
+    const oscillator = context.createOscillator();
+    const volume = context.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = frequency;
+    volume.gain.setValueAtTime(0.0001, start);
+    volume.gain.exponentialRampToValueAtTime(0.12, start + 0.025);
+    volume.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+    oscillator.connect(volume);
+    volume.connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + 0.52);
+  });
+
+  setTimeout(() => context.close(), 1100);
+}
+
+function carregarIDs() {
+  const raw = document.getElementById("idsInput").value;
+  const ids = extractIDs(raw);
+
+  if (!ids.length) {
+    document.getElementById("idsMessage").textContent =
+      "Nenhum ID reconhecido. Confira o tamanho dos IDs na Configuração.";
+    return;
+  }
+
+  const existentes = new Set(state.ids.map(item => item.id));
+  let adicionados = 0;
+
+  ids.forEach(id => {
+    if (!existentes.has(id)) {
+      state.ids.push({
+        id,
+        status: "Pendente",
+        foundAt: "",
+        separatedAt: ""
+      });
+      existentes.add(id);
+      adicionados++;
+    }
+  });
+
+  saveState();
+  renderAll();
+
+  document.getElementById("idsMessage").textContent =
+    ids.length + " IDs reconhecidos; " + adicionados +
+    " novos adicionados. Duplicados ignorados.";
+}
+
+function conferirIDs() {
+  const raw = document.getElementById("tableInput").value;
+  const encontradosNaTabela = extractIDs(raw);
+
+  if (!encontradosNaTabela.length) {
+    document.getElementById("checkMessage").textContent =
+      "Nenhum ID reconhecido. Verifique a tabela e o tamanho configurado.";
+    return;
+  }
+
+  if (!state.ids.length) {
+    document.getElementById("checkMessage").textContent =
+      "Primeiro, carregue os IDs na aba IDs.";
+    return;
+  }
+
+  const tabelaSet = new Set(encontradosNaTabela);
+  const agora = new Date().toLocaleString("pt-BR");
+  let novos = [];
+
+  state.ids.forEach(item => {
+    if (tabelaSet.has(item.id) &&
+        item.status === "Pendente") {
+      item.status = "Encontrado";
+      item.foundAt = agora;
+      state.foundAll.push(item.id);
+      state.foundVisible.push(item.id);
+      novos.push(item.id);
+    }
+  });
+
+  state.lastScan = encontradosNaTabela;
+
+  state.history.unshift({
+    date: agora,
+    total: state.ids.length,
+    tableIDs: encontradosNaTabela.length,
+    newFound: novos.length,
+    pending: state.ids.filter(x => x.status === "Pendente").length,
+    note: "Conferência"
+  });
+
+  state.history = state.history.slice(0, 1000);
+  saveState();
+  renderAll();
+
+  document.getElementById("checkMessage").textContent =
+    encontradosNaTabela.length + " IDs lidos na tabela; " +
+    novos.length + " novos pacotes encontrados.";
+  document.getElementById("tableInput").value = "";
+  playCheckSound();
+}
+
+function separarPacotes() {
+  if (!state.foundVisible.length) {
+    alert("Não há pacotes aguardando separação.");
+    return;
+  }
+
+  const quantidade = state.foundVisible.length;
+  const agora = new Date().toLocaleString("pt-BR");
+  const separados = new Set(state.foundVisible);
+
+  state.ids.forEach(item => {
+    if (separados.has(item.id)) {
+      item.status = "Separado";
+      item.separatedAt = agora;
+    }
+  });
+
+  state.foundVisible = [];
+  saveState();
+  renderAll();
+
+  alert(quantidade + " pacote(s) marcado(s) como separado(s).");
+}
+
+function novaJornada() {
+  if (!confirm("Iniciar uma nova jornada e limpar a lista ativa?")) return;
+
+  state.history.unshift({
+    date: new Date().toLocaleString("pt-BR"),
+    total: state.ids.length,
+    tableIDs: state.lastScan.length,
+    newFound: state.ids.filter(x => x.status !== "Pendente").length,
+    pending: state.ids.filter(x => x.status === "Pendente").length,
+    note: "Jornada encerrada"
+  });
+
+  state.ids = [];
+  state.foundVisible = [];
+  state.foundAll = [];
+  state.lastScan = [];
+
+  document.getElementById("idsInput").value = "";
+  document.getElementById("tableInput").value = "";
+
+  saveState();
+  renderAll();
+  goTab("inicio");
+}
+
+function renderAll() {
+  const total = state.ids.length;
+  const localizados = state.ids.filter(
+    x => x.status === "Encontrado" || x.status === "Separado"
+  ).length;
+  const pendentes = state.ids.filter(x => x.status === "Pendente").length;
+  const percentual = total ? Math.round(localizados / total * 100) : 0;
+
+  document.getElementById("totalStat").textContent = total;
+  document.getElementById("foundStat").textContent = localizados;
+  document.getElementById("pendingStat").textContent = pendentes;
+  document.getElementById("percentStat").textContent = percentual + "%";
+  document.getElementById("progressBar").style.width = percentual + "%";
+
+  document.getElementById("homeSummary").innerHTML = total
+    ? "<p><b>" + total + "</b> IDs na jornada</p>" +
+      "<p><span class='pill'>" + localizados + " localizados</span> " +
+      "<span class='pill pending'>" + pendentes + " pendentes</span></p>"
+    : "Nenhum ID carregado.";
+
+  renderFound("homeFound");
+  renderFound("foundList");
+
+  document.getElementById("foundCountLine").textContent =
+    state.foundVisible.length + " encontrados aguardando separação";
+
+  const filtro = document.getElementById("filterIDs").value.trim();
+  const filtrados = state.ids.filter(x => x.id.includes(filtro));
+
+  document.getElementById("idsTable").innerHTML = tableHTML(filtrados);
+  document.getElementById("checkTable").innerHTML = tableHTML(state.ids);
+  document.getElementById("historyTable").innerHTML = historyHTML();
+}
+
+function renderFound(elementId) {
+  const element = document.getElementById(elementId);
+
+  element.innerHTML = state.foundVisible.length
+    ? state.foundVisible.map(id =>
+        "<div class='found-id'>" + escapeHTML(id) + "</div>"
+      ).join("")
+    : "<div class='empty'>Nenhum pacote aguardando separação.</div>";
+}
+
+function tableHTML(items) {
+  if (!items.length) {
+    return "<div class='empty'>Nenhum ID para mostrar.</div>";
+  }
+
+  return "<table><thead><tr>" +
+    "<th>ID do pacote</th><th>Status</th>" +
+    "<th>Encontrado em</th><th>Separado em</th>" +
+    "</tr></thead><tbody>" +
+    items.map(item => {
+      let pill = "pill pending";
+
+      if (item.status === "Encontrado") pill = "pill";
+      if (item.status === "Separado") pill = "pill separated";
+
+      return "<tr><td>" + escapeHTML(item.id) + "</td>" +
+        "<td><span class='" + pill + "'>" +
+        escapeHTML(item.status) + "</span></td>" +
+        "<td>" + escapeHTML(item.foundAt || "—") + "</td>" +
+        "<td>" + escapeHTML(item.separatedAt || "—") + "</td></tr>";
+    }).join("") +
+    "</tbody></table>";
+}
+
+function historyHTML() {
+  if (!state.history.length) {
+    return "<div class='empty'>Ainda não há conferências registradas.</div>";
+  }
+
+  return "<table><thead><tr>" +
+    "<th>Data/hora</th><th>Total de IDs</th>" +
+    "<th>IDs na tabela</th><th>Novos encontrados</th>" +
+    "<th>Pendentes</th><th>Registro</th>" +
+    "</tr></thead><tbody>" +
+    state.history.map(item =>
+      "<tr><td>" + escapeHTML(item.date || "") + "</td>" +
+      "<td>" + (item.total ?? 0) + "</td>" +
+      "<td>" + (item.tableIDs ?? 0) + "</td>" +
+      "<td>" + (item.newFound ?? 0) + "</td>" +
+      "<td>" + (item.pending ?? 0) + "</td>" +
+      "<td>" + escapeHTML(item.note || "Conferência") + "</td></tr>"
+    ).join("") +
+    "</tbody></table>";
+}
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function limparCaixa(id) {
+  document.getElementById(id).value = "";
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadCSV(filename, rows) {
+  const csv = rows.map(row =>
+    row.map(value =>
+      '"' + String(value ?? "").replace(/"/g, '""') + '"'
+    ).join(";")
+  ).join("\r\n");
+
+  downloadFile(filename, "\uFEFF" + csv, "text/csv;charset=utf-8;");
+}
+
+function exportarIDs() {
+  downloadCSV("radar_ids_ssp21.csv", [
+    ["ID", "Status", "Encontrado em", "Separado em"],
+    ...state.ids.map(x => [x.id, x.status, x.foundAt, x.separatedAt])
+  ]);
+}
+
+function exportarHistorico() {
+  downloadCSV("radar_historico_ssp21.csv", [
+    ["Data/hora", "Total", "IDs na tabela", "Novos encontrados", "Pendentes", "Registro"],
+    ...state.history.map(x => [
+      x.date, x.total, x.tableIDs, x.newFound, x.pending, x.note
+    ])
+  ]);
+}
+
+function limparHistorico() {
+  if (!confirm("Apagar todo o histórico?")) return;
+  state.history = [];
+  saveState();
+  renderAll();
+}
+
+function salvarConfig() {
+  const min = Number(document.getElementById("minDigits").value);
+  const max = Number(document.getElementById("maxDigits").value);
+
+  if (!Number.isInteger(min) || !Number.isInteger(max) ||
+      min < 1 || max > 50 || min > max) {
+    alert("Informe um intervalo válido: mínimo de 1, máximo de 50, e o mínimo não pode superar o máximo.");
+    return;
+  }
+
+  state.config = { min, max };
+  saveState();
+
+  document.getElementById("configMessage").textContent =
+    "Configuração salva: IDs de " + min + " a " + max + " dígitos.";
+}
+
+function exportarBackup() {
+  downloadFile(
+    "backup_radar_ssp21.json",
+    JSON.stringify(state, null, 2),
+    "application/json"
+  );
+}
+
+function restaurarBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+
+      if (!data || !Array.isArray(data.ids) ||
+          !Array.isArray(data.history)) {
+        throw new Error("Formato inválido");
+      }
+
+      if (confirm("Substituir os dados atuais pelos dados do backup?")) {
+        state = {
+          ...state,
+          ...data,
+          config: { ...state.config, ...(data.config || {}) }
+        };
+        saveState();
+        renderAll();
+        alert("Backup restaurado.");
+      }
+    } catch (error) {
+      alert("Não foi possível restaurar. Verifique se o arquivo é um backup válido.");
+    }
+
+    event.target.value = "";
+  };
+
+  reader.readAsText(file);
+}
+
+function apagarTudo() {
+  if (!confirm("Apagar permanentemente todos os IDs, histórico e configurações locais?")) return;
+
+  state = {
+    ids: [],
+    foundVisible: [],
+    foundAll: [],
+    history: [],
+    config: { min: 8, max: 30 },
+    lastScan: []
+  };
+
+  saveState();
+  document.getElementById("idsInput").value = "";
+  document.getElementById("tableInput").value = "";
+  renderAll();
+  goTab("inicio");
+}
+
+loadState();
+renderAll();
+configureSupabase();
+</script>
+</body>
+</html>
