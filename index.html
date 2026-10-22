@@ -557,8 +557,6 @@ function separarPacotes() {
 }
 
 function novaJornada() {
-  if (!confirm("Iniciar uma nova jornada e limpar a lista ativa?")) return;
-
   state.history.unshift({
     date: new Date().toLocaleString("pt-BR"),
     total: state.ids.length,
@@ -721,7 +719,6 @@ function exportarHistorico() {
 }
 
 function limparHistorico() {
-  if (!confirm("Apagar todo o histórico?")) return;
   state.history = [];
   saveState();
   renderAll();
@@ -767,16 +764,14 @@ function restaurarBackup(event) {
         throw new Error("Formato inválido");
       }
 
-      if (confirm("Substituir os dados atuais pelos dados do backup?")) {
-        state = {
-          ...state,
-          ...data,
-          config: { ...state.config, ...(data.config || {}) }
-        };
-        saveState();
-        renderAll();
-        alert("Backup restaurado.");
-      }
+      state = {
+        ...state,
+        ...data,
+        config: { ...state.config, ...(data.config || {}) }
+      };
+      saveState();
+      renderAll();
+      alert("Backup restaurado.");
     } catch (error) {
       alert("Não foi possível restaurar. Verifique se o arquivo é um backup válido.");
     }
@@ -788,8 +783,6 @@ function restaurarBackup(event) {
 }
 
 function apagarTudo() {
-  if (!confirm("Apagar permanentemente todos os IDs, histórico e configurações locais?")) return;
-
   state = {
     ids: [],
     foundVisible: [],
