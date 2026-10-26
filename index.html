@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Radar HV SSP21</title>
+<title>Radar de IDs SSP21 PRO</title>
 
 <style>
 :root {
@@ -143,7 +143,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   <div class="brand">
     <div class="logo">↔</div>
     <div>
-      <h1>RADAR DE IDs <span>SSP21</span></h1>
+      <h1>RADAR DE IDs <span>SSP21 PRO</span></h1>
       <p>Retorno à Estação • Conferência de pacotes</p>
     </div>
   </div>
@@ -269,7 +269,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 
     <div class="card half">
       <h3>2. IDs encontrados</h3>
-      <p class="sub">Alerta sonoro ao concluir a conferência. Os IDs ficam fixos até a confirmação.</p>
+      <p class="sub">Alerta sonoro alto quando novos IDs forem localizados. Eles ficam fixos até a confirmação.</p>
       <div id="foundCountLine" style="font-size:25px;font-weight:bold;color:var(--green);margin:14px 0">0 encontrados</div>
       <div id="foundList" class="found-grid"></div>
       <div class="row">
@@ -316,7 +316,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
       <h3>Preferências</h3>
       <div class="setting-line">
         <b>Alertas sonoros</b>
-        <p>Ativos. Um toque curto confirma cada conferência concluída.</p>
+        <p>Ativos. Um alerta alto toca quando novos IDs são localizados.</p>
       </div>
       <div class="setting-line">
         <b>Armazenamento</b>
@@ -419,31 +419,32 @@ function extractIDs(text) {
   )];
 }
 
-function playCheckSound() {
+function playFoundSound() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return;
 
   const context = new AudioContextClass();
-  const now = context.currentTime;
-  const notes = [659.25, 783.99, 987.77, 1318.51];
+  const start = context.currentTime;
+  const pulses = 3;
 
-  notes.forEach((frequency, index) => {
-    const start = now + index * 0.12;
+  for (let index = 0; index < pulses; index++) {
+    const pulseStart = start + index * 0.48;
     const oscillator = context.createOscillator();
     const volume = context.createGain();
 
-    oscillator.type = "sine";
-    oscillator.frequency.value = frequency;
-    volume.gain.setValueAtTime(0.0001, start);
-    volume.gain.exponentialRampToValueAtTime(0.12, start + 0.025);
-    volume.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+    oscillator.type = "square";
+    oscillator.frequency.value = 880;
+    volume.gain.setValueAtTime(0.0001, pulseStart);
+    volume.gain.exponentialRampToValueAtTime(0.8, pulseStart + 0.02);
+    volume.gain.setValueAtTime(0.8, pulseStart + 0.3);
+    volume.gain.exponentialRampToValueAtTime(0.0001, pulseStart + 0.36);
     oscillator.connect(volume);
     volume.connect(context.destination);
-    oscillator.start(start);
-    oscillator.stop(start + 0.52);
-  });
+    oscillator.start(pulseStart);
+    oscillator.stop(pulseStart + 0.38);
+  }
 
-  setTimeout(() => context.close(), 1100);
+  setTimeout(() => context.close(), 1600);
 }
 
 function carregarIDs() {
@@ -530,7 +531,7 @@ function conferirIDs() {
     encontradosNaTabela.length + " IDs lidos na tabela; " +
     novos.length + " novos pacotes encontrados.";
   document.getElementById("tableInput").value = "";
-  playCheckSound();
+  if (novos.length > 0) playFoundSound();
 }
 
 function separarPacotes() {
